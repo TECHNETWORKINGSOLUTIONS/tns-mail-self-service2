@@ -1,29 +1,69 @@
+
 <!doctype html>
-<html lang='en'>
+<html lang="en">
 <head>
-  <meta charset='utf-8'/>
+  <meta charset="utf-8"/>
   <title>TNS Mail Portal</title>
-  <meta name='viewport' content='width=device-width, initial-scale=1'/>
-  <link rel='stylesheet' href='style.css'/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  style.css
 </head>
 <body>
-  <div class='container'>
+  <div class="container">
     <h1>TNS Mail Service</h1>
-    <form id='provisionForm'>
-      <input name='domain' placeholder='Domain (example.com)' required>
-      <input name='email' placeholder='Admin Email' required>
-      <input name='password' type='password' placeholder='Password' required>
-      <button type='submit'>Provision Domain</button>
+    <form id="provisionForm" autocomplete="off">
+      <input name="domain" placeholder="Domain (example.com)" required>
+      <input name="email" placeholder="Admin Email" required>
+      <input name="password" type="password" placeholder="Password" required>
+      <!-- Prevent native submit -->
+      <button id="provisionBtn" type="button">Provision Domain</button>
     </form>
-    <pre id='output'></pre>
+    <pre id="output"></pre>
   </div>
+
   <script>
-  document.getElementById('provisionForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
+    (function () {
+      const form = document.getElementById('provisionForm');
+      const btn  = document.getElementById('provisionBtn');
+      const out  = document.getElementById('output');
 
-    const data = Object.fromEntries(new FormData(e.target));
+      function getPayload() {
+        return Object.fromEntries(new FormData(form));
+      }
 
-    // Use relative path; Nginx (frontend) proxies /api/* to backend:3000 internally
+      async function provision() {
+        try {
+          console.log('[TNS] Provision clicked');
+          out.textContent = 'Processing...';
+
+          const res = await fetch('/api/provision', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(getPayload())
+          });
+
+          const body = await res.json().catch(() => ({}));
+          console.log('[TNS] Response', res.status, body);
+          out.textContent = JSON.stringify(body, null, 2);
+        } catch (err) {
+          console.error('[TNS] Error', err);
+          out.textContent = 'Error: ' + (err?.message || String(err));
+        }
+      }
+
+      // Primary: button click
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        provision();
+      });
+
+      // Secondary: Enter in form
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        provision();
+      });
+
+      console.log('[TNS] UI initialized');
+    })();
   </script>
 </body>
 </html>
