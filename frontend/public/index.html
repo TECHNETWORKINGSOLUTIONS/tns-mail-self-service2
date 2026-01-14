@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang='en'>
+<head>
+  <meta charset='utf-8'/>
+  <title>TNS Mail Portal</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'/>
+  <link rel='stylesheet' href='style.css'/>
+</head>
+<body>
+  <div class='container'>
+    <h1>TNS Mail Service</h1>
+    <form id='provisionForm'>
+      <input name='domain' placeholder='Domain (example.com)' required>
+      <input name='email' placeholder='Admin Email' required>
+      <input name='password' type='password' placeholder='Password' required>
+      <button type='submit'>Provision Domain</button>
+    </form>
+    <pre id='output'></pre>
+  </div>
+  <script>
+    document.getElementById('provisionForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target));
+      const base = window.location.hostname;
+      const res = await fetch('http://' + base + ':3000/api/provision', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      document.getElementById('output').textContent = JSON.stringify(await res.json(), null, 2);
+    });
+  </script>
+</body>
+</html>
