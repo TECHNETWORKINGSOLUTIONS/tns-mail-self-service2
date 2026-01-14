@@ -17,17 +17,14 @@
     </form>
     <pre id='output'></pre>
   </div>
-  <script>
-    document.getElementById('provisionForm').addEventListener('submit', async e => {
-      e.preventDefault();
-      const data = Object.fromEntries(new FormData(e.target));
-      const base = window.location.hostname;
-      const res = await fetch('http://' + base + ':3000/api/provision', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      document.getElementById('output').textContent = JSON.stringify(await res.json(), null, 2);
-    });
+  
+<script>
+  document.getElementById('provisionForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const data = Object.fromEntries(new FormData(e.target));
+
+    // Use relative path; Nginx (frontend) proxies /api/* to backend:3000 internally
   </script>
 </body>
 </html>
