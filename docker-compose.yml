@@ -1,0 +1,22 @@
+version: "3.9"
+services:
+  backend:
+    build: ./backend
+    container_name: tns-mailcow-backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      MAILCOW_URL: https://mail.tnsicn.org
+      MAILCOW_API_KEY: CD6E54-0EE9F4-C418F3-D83EE7-00E95A
+      MAILCOW_HOSTNAME: mail.tnsicn.org
+      OWNERSHIP_PREFIX: _mc-verify
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: tns-mailcow-frontend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
