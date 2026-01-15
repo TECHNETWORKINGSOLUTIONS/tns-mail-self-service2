@@ -6,6 +6,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Load Mailcow environment variables
 const { MAILCOW_URL, MAILCOW_API_KEY } = process.env;
 
 const api = axios.create({
@@ -13,6 +14,7 @@ const api = axios.create({
   headers: { 'X-API-Key': MAILCOW_API_KEY }
 });
 
+// Provision domain + DKIM + domain admin
 app.post('/api/provision', async (req, res) => {
   const { domain, email, password } = req.body;
 
@@ -30,7 +32,7 @@ app.post('/api/provision', async (req, res) => {
       length: 2048
     });
 
-    // 3. Create domain admin (FIXED)
+    // 3. Create domain admin (correct Mailcow schema)
     await api.post('/add/domain-admin', {
       active: 1,
       username: email,
@@ -42,7 +44,7 @@ app.post('/api/provision', async (req, res) => {
       quota: 0
     });
 
-    // 4. Return success + DKIM
+    // 4. Success response
     res.json({
       ok: true,
       message: 'Domain provisioned. Add DNS records.',
@@ -58,4 +60,5 @@ app.post('/api/provision', async (req, res) => {
   }
 });
 
+// Start server
 app.listen(3000, () => console.log('Backend running on port 3000'));
