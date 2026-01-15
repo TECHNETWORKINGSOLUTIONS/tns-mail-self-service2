@@ -42,12 +42,8 @@
       <div class="flex justify-between items-center bg-gray-800 rounded-lg p-4 mb-6 shadow-md">
         <div>
           <span id="userEmail" class="font-semibold"></span>
-          <span id="userPlan" class="ml-4 text-sm bg-gray-700 px-2 py-1 rounded"></span>
         </div>
-        <div class="space-x-2">
-          <button id="upgradeBtn" class="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 rounded font-semibold">Upgrade Plan</button>
-          <button id="logoutBtn" class="px-3 py-1 bg-red-500 hover:bg-red-600 rounded font-semibold">Logout</button>
-        </div>
+        <button id="logoutBtn" class="px-3 py-1 bg-red-500 hover:bg-red-600 rounded font-semibold">Logout</button>
       </div>
 
       <!-- TABS -->
@@ -68,50 +64,36 @@
       <div id="domainsPanel" class="panel hidden space-y-4">
         <h2 class="text-2xl font-semibold">Your Domains</h2>
         <ul id="domainList" class="divide-y divide-gray-700"></ul>
-
         <div id="domainDetails" class="hidden bg-gray-800 p-4 rounded shadow-md"></div>
 
-        <div>
-          <h3 class="text-lg font-semibold">Add Domain</h3>
-          <form id="domainForm" class="flex gap-2 mt-2">
-            <input name="domain" placeholder="Domain (example.com)" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 rounded font-semibold">Provision</button>
-          </form>
-        </div>
+        <form id="domainForm" class="flex gap-2 mt-2">
+          <input name="domain" placeholder="Domain" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 rounded font-semibold">Provision</button>
+        </form>
 
-        <div>
-          <h3 class="text-lg font-semibold">Verify Domain</h3>
-          <form id="verifyForm" class="flex gap-2 mt-2">
-            <input name="domain" placeholder="Domain" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
-            <input name="token" placeholder="Token" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
-            <button type="submit" class="bg-green-600 hover:bg-green-700 px-4 rounded font-semibold">Verify</button>
-          </form>
-        </div>
+        <form id="verifyForm" class="flex gap-2 mt-2">
+          <input name="domain" placeholder="Domain" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
+          <input name="token" placeholder="Token" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
+          <button type="submit" class="bg-green-600 hover:bg-green-700 px-4 rounded font-semibold">Verify</button>
+        </form>
       </div>
 
       <div id="mailboxesPanel" class="panel hidden space-y-4">
         <h2 class="text-2xl font-semibold">Your Mailboxes</h2>
         <ul id="mailboxList" class="divide-y divide-gray-700"></ul>
+        <form id="mailboxForm" class="grid grid-cols-1 md:grid-cols-4 gap-2 mt-2">
+          <input name="domain" placeholder="Domain" required class="p-2 rounded border border-gray-700 bg-gray-900"/>
+          <input name="local_part" placeholder="User" required class="p-2 rounded border border-gray-700 bg-gray-900"/>
+          <input name="password" type="password" placeholder="Password" required class="p-2 rounded border border-gray-700 bg-gray-900"/>
+          <input name="quota" type="number" placeholder="Quota MB" class="p-2 rounded border border-gray-700 bg-gray-900"/>
+          <button type="submit" class="col-span-1 md:col-span-4 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold">Create Mailbox</button>
+        </form>
 
-        <div>
-          <h3 class="text-lg font-semibold">Add Mailbox</h3>
-          <form id="mailboxForm" class="grid grid-cols-1 md:grid-cols-4 gap-2 mt-2">
-            <input name="domain" placeholder="Domain" required class="p-2 rounded border border-gray-700 bg-gray-900"/>
-            <input name="local_part" placeholder="User" required class="p-2 rounded border border-gray-700 bg-gray-900"/>
-            <input name="password" type="password" placeholder="Password" required class="p-2 rounded border border-gray-700 bg-gray-900"/>
-            <input name="quota" type="number" placeholder="Quota MB" class="p-2 rounded border border-gray-700 bg-gray-900"/>
-            <button type="submit" class="col-span-1 md:col-span-4 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold">Create Mailbox</button>
-          </form>
-        </div>
-
-        <div>
-          <h3 class="text-lg font-semibold">Reset Mailbox Password</h3>
-          <form id="resetMailboxForm" class="flex gap-2 mt-2">
-            <input name="address" placeholder="Email" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
-            <input name="new_password" type="password" placeholder="New Password" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
-            <button type="submit" class="bg-red-600 hover:bg-red-700 px-4 rounded font-semibold">Reset</button>
-          </form>
-        </div>
+        <form id="resetMailboxForm" class="flex gap-2 mt-2">
+          <input name="address" placeholder="Email" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
+          <input name="new_password" type="password" placeholder="New Password" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
+          <button type="submit" class="bg-red-600 hover:bg-red-700 px-4 rounded font-semibold">Reset</button>
+        </form>
       </div>
 
       <div id="accountPanel" class="panel hidden">
@@ -122,38 +104,23 @@
       <div id="adminPanel" class="panel hidden space-y-4">
         <h2 class="text-2xl font-semibold">Admin Panel</h2>
 
-        <div>
-          <h3 class="text-lg font-semibold">All Users</h3>
-          <ul id="adminUserList" class="divide-y divide-gray-700"></ul>
-        </div>
+        <ul id="adminUserList" class="divide-y divide-gray-700"></ul>
+        <form id="promoteForm" class="flex gap-2 mt-2">
+          <input name="email" placeholder="Email to promote" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 rounded font-semibold">Promote</button>
+        </form>
 
-        <div>
-          <h3 class="text-lg font-semibold">Promote User</h3>
-          <form id="promoteForm" class="flex gap-2 mt-2">
-            <input name="email" placeholder="Email to promote" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 rounded font-semibold">Promote</button>
-          </form>
-        </div>
-
-        <div>
-          <h3 class="text-lg font-semibold">All Domains</h3>
-          <ul id="adminDomainList" class="divide-y divide-gray-700"></ul>
-        </div>
-
-        <div>
-          <h3 class="text-lg font-semibold">Suspend Domain</h3>
-          <form id="suspendForm" class="flex gap-2 mt-2">
-            <input name="domain" placeholder="Domain" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
-            <button type="submit" class="bg-red-600 hover:bg-red-700 px-4 rounded font-semibold">Suspend</button>
-          </form>
-        </div>
+        <ul id="adminDomainList" class="divide-y divide-gray-700"></ul>
+        <form id="suspendForm" class="flex gap-2 mt-2">
+          <input name="domain" placeholder="Domain" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
+          <button type="submit" class="bg-red-600 hover:bg-red-700 px-4 rounded font-semibold">Suspend</button>
+        </form>
       </div>
 
       <pre id="output" class="bg-gray-800 p-4 rounded mt-6 overflow-x-auto"></pre>
     </div>
   </div>
 
-  <!-- SCRIPT -->
   <script src="app.js"></script>
 </body>
 </html>
