@@ -6,7 +6,7 @@ body {
 }
 
 .container {
-  max-width: 800px;
+  max-width: 900px;
   margin: 40px auto;
   padding: 24px;
   background: #020617;
@@ -51,6 +51,30 @@ button:hover {
   margin-bottom: 16px;
 }
 
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tab {
+  flex: 0 0 auto;
+  background: #111827;
+  border-color: #1f2937;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.tab.active {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.panel {
+  margin-bottom: 20px;
+}
+
 #domainList, #mailboxList {
   list-style: none;
   padding-left: 0;
@@ -59,6 +83,14 @@ button:hover {
 #domainList li, #mailboxList li {
   padding: 6px 0;
   border-bottom: 1px solid #111827;
+}
+
+.card {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #1f2937;
+  background: #020617;
 }
 
 pre {
