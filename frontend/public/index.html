@@ -82,6 +82,13 @@
           <input name="quota" type="number" placeholder="Quota MB (default 1024)">
           <button type="submit">Create Mailbox</button>
         </form>
+
+        <h3>Reset Mailbox Password</h3>
+        <form id="resetMailboxForm" autocomplete="off">
+          <input name="address" placeholder="user@example.com" required>
+          <input name="new_password" type="password" placeholder="New Password" required>
+          <button type="submit">Reset Password</button>
+        </form>
       </div>
 
       <div id="accountPanel" class="panel" style="display:none;">
@@ -91,7 +98,24 @@
 
       <div id="adminPanel" class="panel" style="display:none;">
         <h2>Admin Panel</h2>
-        <p>Admin tools will appear here after backend upgrade.</p>
+
+        <h3>All Users</h3>
+        <ul id="adminUserList"></ul>
+
+        <h3>Promote User to Admin</h3>
+        <form id="promoteForm">
+          <input name="email" placeholder="Email to promote" required>
+          <button type="submit">Promote</button>
+        </form>
+
+        <h3>All Domains</h3>
+        <ul id="adminDomainList"></ul>
+
+        <h3>Suspend Domain</h3>
+        <form id="suspendForm">
+          <input name="domain" placeholder="Domain to suspend" required>
+          <button type="submit">Suspend</button>
+        </form>
       </div>
 
       <pre id="output"></pre>
@@ -108,6 +132,7 @@
       const domainForm  = document.getElementById('domainForm');
       const verifyForm  = document.getElementById('verifyForm');
       const mailboxForm = document.getElementById('mailboxForm');
+      const resetMailboxForm = document.getElementById('resetMailboxForm');
       const domainList  = document.getElementById('domainList');
       const mailboxList = document.getElementById('mailboxList');
       const output      = document.getElementById('output');
@@ -117,6 +142,11 @@
       const tabs        = Array.from(document.querySelectorAll('.tab'));
       const panels      = Array.from(document.querySelectorAll('.panel'));
       const adminTab    = document.getElementById('adminTab');
+
+      const adminUserList = document.getElementById('adminUserList');
+      const adminDomainList = document.getElementById('adminDomainList');
+      const promoteForm = document.getElementById('promoteForm');
+      const suspendForm = document.getElementById('suspendForm');
 
       function getToken() {
         return localStorage.getItem('tns_token') || null;
@@ -152,6 +182,8 @@
         tab.addEventListener('click', () => {
           const panelId = tab.dataset.panel;
           showPanel(panelId);
+
+          if (panelId === 'adminPanel') loadAdmin();
         });
       });
 
@@ -181,6 +213,9 @@
           setUserEmail(data.user.email);
           showApp();
           showPanel('overviewPanel');
+
+          if (data.user.is_admin === 1) adminTab.style.display = 'inline-block';
+
           await Promise.all([loadDomains(), loadMailboxes()]);
         } catch {
           showAuth();
@@ -192,23 +227,43 @@
           const data = await api('/api/domains');
           domainList.innerHTML = '';
           domainDetails.style.display = 'none';
+
           (data.domains || []).forEach(d => {
             const li = document.createElement('li');
             const status = d.verified ? '✅ verified' : '❌ not verified';
-            li.textContent = `${d.domain} (${status})`;
+            const suspended = d.suspended ? '⛔ suspended' : '';
+
+            li.textContent = `${d.domain} (${status}) ${suspended}`;
             li.style.cursor = 'pointer';
+
             li.addEventListener('click', () => {
               const verifyInfo = d.verify_token
                 ? `TXT _tns-verify.${d.domain} = ${d.verify_token}`
                 : 'No verification token stored.';
+
               domainDetails.innerHTML = `
                 <h3>Domain details</h3>
                 <p><strong>Domain:</strong> ${d.domain}</p>
                 <p><strong>Status:</strong> ${status}</p>
+                <p><strong>Suspended:</strong> ${d.suspended ? 'Yes' : 'No'}</p>
                 <p><strong>Verification:</strong> ${verifyInfo}</p>
+                <button id="dnsCheckBtn">Check DNS</button>
               `;
+
+              document.getElementById('dnsCheckBtn').onclick = async () => {
+                output.textContent = 'Checking DNS...';
+                try {
+                  const resp = await api(`/api/domains/check-dns?domain=${d.domain}`);
+                  output.textContent = resp.message;
+                  await loadDomains();
+                } catch (err) {
+                  output.textContent = 'DNS check error: ' + err.message;
+                }
+              };
+
               domainDetails.style.display = 'block';
             });
+
             domainList.appendChild(li);
           });
         } catch (err) {
@@ -220,13 +275,51 @@
         try {
           const data = await api('/api/mailboxes');
           mailboxList.innerHTML = '';
+
           (data.mailboxes || []).forEach(m => {
             const li = document.createElement('li');
-            li.textContent = `${m.address} (${m.domain})`;
+            li.innerHTML = `
+              ${m.address} (${m.domain})
+              <button class="small danger" data-id="${m.id}">Delete</button>
+            `;
+
+            li.querySelector('button').onclick = async () => {
+              output.textContent = 'Deleting mailbox...';
+              try {
+                await api(`/api/mailboxes/${m.id}`, { method: 'DELETE' });
+                output.textContent = 'Mailbox deleted';
+                await loadMailboxes();
+              } catch (err) {
+                output.textContent = 'Delete error: ' + err.message;
+              }
+            };
+
             mailboxList.appendChild(li);
           });
         } catch (err) {
           output.textContent = 'Error loading mailboxes: ' + err.message;
+        }
+      }
+
+      async function loadAdmin() {
+        try {
+          const users = await api('/api/admin/users');
+          adminUserList.innerHTML = '';
+          users.users.forEach(u => {
+            const li = document.createElement('li');
+            li.textContent = `${u.email} (admin: ${u.is_admin})`;
+            adminUserList.appendChild(li);
+          });
+
+          const domains = await api('/api/admin/domains');
+          adminDomainList.innerHTML = '';
+          domains.domains.forEach(d => {
+            const li = document.createElement('li');
+            li.textContent = `${d.domain} (verified: ${d.verified}, suspended: ${d.suspended})`;
+            adminDomainList.appendChild(li);
+          });
+        } catch (err) {
+          output.textContent = 'Admin load error: ' + err.message;
         }
       }
 
@@ -321,6 +414,56 @@
           showPanel('mailboxesPanel');
         } catch (err) {
           output.textContent = 'Mailbox error: ' + err.message;
+        }
+      });
+
+      resetMailboxForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = Object.fromEntries(new FormData(resetMailboxForm));
+        output.textContent = 'Resetting password...';
+        try {
+          const data = await api('/api/mailboxes/reset', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          output.textContent = data.message;
+          resetMailboxForm.reset();
+        } catch (err) {
+          output.textContent = 'Reset error: ' + err.message;
+        }
+      });
+
+      promoteForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = Object.fromEntries(new FormData(promoteForm));
+        output.textContent = 'Promoting user...';
+        try {
+          const data = await api('/api/admin/users/promote', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          output.textContent = data.message;
+          promoteForm.reset();
+          await loadAdmin();
+        } catch (err) {
+          output.textContent = 'Promote error: ' + err.message;
+        }
+      });
+
+      suspendForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = Object.fromEntries(new FormData(suspendForm));
+        output.textContent = 'Suspending domain...';
+        try {
+          const data = await api('/api/admin/domains/suspend', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          output.textContent = data.message;
+          suspendForm.reset();
+          await loadAdmin();
+        } catch (err) {
+          output.textContent = 'Suspend error: ' + err.message;
         }
       });
 
