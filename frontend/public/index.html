@@ -4,87 +4,156 @@
   <meta charset="utf-8"/>
   <title>TNS Mail Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body>
-  <div class="container">
-    <h1>TNS Mail Service</h1>
+<body class="bg-gray-900 text-gray-100 font-sans">
+  <div class="max-w-5xl mx-auto p-6">
+
+    <h1 class="text-3xl font-bold text-center mb-6">TNS Mail Service</h1>
 
     <!-- AUTH SECTION -->
-    <div id="authSection">
-      <h2>Login</h2>
-      <form id="loginForm" autocomplete="off">
-        <input name="email" type="email" placeholder="Email" required>
-        <input name="password" type="password" placeholder="Password" required>
-        <button type="submit">Login</button>
-      </form>
+    <div id="authSection" class="space-y-6">
 
-      <h3>Or sign up</h3>
-      <form id="signupForm" autocomplete="off">
-        <input name="email" type="email" placeholder="Email" required>
-        <input name="password" type="password" placeholder="Password" required>
-        <button type="submit">Sign Up</button>
-      </form>
+      <div class="bg-gray-800 rounded-lg p-6 shadow-md">
+        <h2 class="text-2xl font-semibold mb-4">Login</h2>
+        <form id="loginForm" class="space-y-3">
+          <input name="email" type="email" placeholder="Email" required class="w-full p-2 rounded border border-gray-700 bg-gray-900"/>
+          <input name="password" type="password" placeholder="Password" required class="w-full p-2 rounded border border-gray-700 bg-gray-900"/>
+          <button type="submit" class="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded font-semibold">Login</button>
+        </form>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg p-6 shadow-md">
+        <h3 class="text-xl font-semibold mb-4">Sign Up</h3>
+        <form id="signupForm" class="space-y-3">
+          <input name="email" type="email" placeholder="Email" required class="w-full p-2 rounded border border-gray-700 bg-gray-900"/>
+          <input name="password" type="password" placeholder="Password" required class="w-full p-2 rounded border border-gray-700 bg-gray-900"/>
+          <button type="submit" class="w-full py-2 bg-green-600 hover:bg-green-700 rounded font-semibold">Sign Up</button>
+        </form>
+      </div>
+
     </div>
 
     <!-- APP SECTION -->
-    <div id="appSection" style="display:none;">
+    <div id="appSection" class="hidden">
 
       <!-- Topbar -->
-      <div class="topbar">
-        <span id="userEmail"></span> | <span id="userPlan"></span>
-        <button id="upgradeBtn">Upgrade Plan</button>
-        <button id="logoutBtn">Logout</button>
+      <div class="flex justify-between items-center bg-gray-800 rounded-lg p-4 mb-6 shadow-md">
+        <div>
+          <span id="userEmail" class="font-semibold"></span>
+          <span id="userPlan" class="ml-4 text-sm bg-gray-700 px-2 py-1 rounded"></span>
+        </div>
+        <div class="space-x-2">
+          <button id="upgradeBtn" class="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 rounded font-semibold">Upgrade Plan</button>
+          <button id="logoutBtn" class="px-3 py-1 bg-red-500 hover:bg-red-600 rounded font-semibold">Logout</button>
+        </div>
       </div>
 
       <!-- TABS -->
-      <div class="tabs">
-        <button data-panel="overviewPanel" class="tab active">Overview</button>
-        <button data-panel="domainsPanel" class="tab">Domains</button>
-        <button data-panel="mailboxesPanel" class="tab">Mailboxes</button>
-        <button data-panel="accountPanel" class="tab">Account</button>
-        <button data-panel="adminPanel" class="tab" id="adminTab" style="display:none;">Admin</button>
+      <div class="flex gap-2 mb-6">
+        <button data-panel="overviewPanel" class="tab px-4 py-2 rounded bg-blue-600 font-semibold">Overview</button>
+        <button data-panel="domainsPanel" class="tab px-4 py-2 rounded bg-gray-700 font-semibold">Domains</button>
+        <button data-panel="mailboxesPanel" class="tab px-4 py-2 rounded bg-gray-700 font-semibold">Mailboxes</button>
+        <button data-panel="accountPanel" class="tab px-4 py-2 rounded bg-gray-700 font-semibold">Account</button>
+        <button data-panel="adminPanel" class="tab hidden px-4 py-2 rounded bg-gray-700 font-semibold" id="adminTab">Admin</button>
       </div>
 
       <!-- PANELS -->
       <div id="overviewPanel" class="panel">
-        <h2>Overview</h2>
+        <h2 class="text-2xl font-semibold mb-2">Overview</h2>
         <p>Welcome to your TNS Mail portal.</p>
       </div>
 
-      <div id="domainsPanel" class="panel" style="display:none;">
-        <h2>Your Domains</h2>
-        <ul id="domainList"></ul>
+      <div id="domainsPanel" class="panel hidden space-y-4">
+        <h2 class="text-2xl font-semibold">Your Domains</h2>
+        <ul id="domainList" class="divide-y divide-gray-700"></ul>
 
-        <div id="domainDetails" class="card" style="display:none;"></div>
+        <div id="domainDetails" class="hidden bg-gray-800 p-4 rounded shadow-md"></div>
 
-        <h3>Add Domain</h3>
-        <form id="domainForm" autocomplete="off">
-          <input name="domain" placeholder="Domain (example.com)" required>
-          <button type="submit">Provision Domain</button>
-        </form>
+        <div>
+          <h3 class="text-lg font-semibold">Add Domain</h3>
+          <form id="domainForm" class="flex gap-2 mt-2">
+            <input name="domain" placeholder="Domain (example.com)" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 rounded font-semibold">Provision</button>
+          </form>
+        </div>
 
-        <h3>Verify Domain</h3>
-        <form id="verifyForm" autocomplete="off">
-          <input name="domain" placeholder="Domain (example.com)" required>
-          <input name="token" placeholder="Verification token" required>
-          <button type="submit">Mark Verified</button>
-        </form>
+        <div>
+          <h3 class="text-lg font-semibold">Verify Domain</h3>
+          <form id="verifyForm" class="flex gap-2 mt-2">
+            <input name="domain" placeholder="Domain" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
+            <input name="token" placeholder="Token" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
+            <button type="submit" class="bg-green-600 hover:bg-green-700 px-4 rounded font-semibold">Verify</button>
+          </form>
+        </div>
       </div>
 
-      <div id="mailboxesPanel" class="panel" style="display:none;">
-        <h2>Your Mailboxes</h2>
-        <ul id="mailboxList"></ul>
+      <div id="mailboxesPanel" class="panel hidden space-y-4">
+        <h2 class="text-2xl font-semibold">Your Mailboxes</h2>
+        <ul id="mailboxList" class="divide-y divide-gray-700"></ul>
 
-        <h3>Add Mailbox</h3>
-        <form id="mailboxForm" autocomplete="off">
-          <input name="domain" placeholder="Domain (example.com)" required>
-          <input name="local_part" placeholder="Local part (user)" required>
-          <input name="password" type="password" placeholder="Password" required>
-          <input name="quota" type="number" placeholder="Quota MB (default 1024)">
-          <button type="submit">Create Mailbox</button>
-        </form>
+        <div>
+          <h3 class="text-lg font-semibold">Add Mailbox</h3>
+          <form id="mailboxForm" class="grid grid-cols-1 md:grid-cols-4 gap-2 mt-2">
+            <input name="domain" placeholder="Domain" required class="p-2 rounded border border-gray-700 bg-gray-900"/>
+            <input name="local_part" placeholder="User" required class="p-2 rounded border border-gray-700 bg-gray-900"/>
+            <input name="password" type="password" placeholder="Password" required class="p-2 rounded border border-gray-700 bg-gray-900"/>
+            <input name="quota" type="number" placeholder="Quota MB" class="p-2 rounded border border-gray-700 bg-gray-900"/>
+            <button type="submit" class="col-span-1 md:col-span-4 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold">Create Mailbox</button>
+          </form>
+        </div>
 
-        <h3>Reset Mailbox Password</h3>
-        <form id="resetMailboxForm" autocomplete="off">
+        <div>
+          <h3 class="text-lg font-semibold">Reset Mailbox Password</h3>
+          <form id="resetMailboxForm" class="flex gap-2 mt-2">
+            <input name="address" placeholder="Email" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
+            <input name="new_password" type="password" placeholder="New Password" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
+            <button type="submit" class="bg-red-600 hover:bg-red-700 px-4 rounded font-semibold">Reset</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="accountPanel" class="panel hidden">
+        <h2 class="text-2xl font-semibold mb-2">Account</h2>
+        <p>Account settings coming soon.</p>
+      </div>
+
+      <div id="adminPanel" class="panel hidden space-y-4">
+        <h2 class="text-2xl font-semibold">Admin Panel</h2>
+
+        <div>
+          <h3 class="text-lg font-semibold">All Users</h3>
+          <ul id="adminUserList" class="divide-y divide-gray-700"></ul>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-semibold">Promote User</h3>
+          <form id="promoteForm" class="flex gap-2 mt-2">
+            <input name="email" placeholder="Email to promote" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 px-4 rounded font-semibold">Promote</button>
+          </form>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-semibold">All Domains</h3>
+          <ul id="adminDomainList" class="divide-y divide-gray-700"></ul>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-semibold">Suspend Domain</h3>
+          <form id="suspendForm" class="flex gap-2 mt-2">
+            <input name="domain" placeholder="Domain" required class="flex-1 p-2 rounded border border-gray-700 bg-gray-900"/>
+            <button type="submit" class="bg-red-600 hover:bg-red-700 px-4 rounded font-semibold">Suspend</button>
+          </form>
+        </div>
+      </div>
+
+      <pre id="output" class="bg-gray-800 p-4 rounded mt-6 overflow-x-auto"></pre>
+    </div>
+  </div>
+
+  <!-- SCRIPT -->
+  <script src="app.js"></script>
+</body>
+</html>
