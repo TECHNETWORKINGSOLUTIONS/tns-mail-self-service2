@@ -1,11 +1,3 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <title>TNS Mail Portal</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <link rel="stylesheet" href="style.css">
-</head>
 <body>
   <div class="container">
     <h1>TNS Mail Service</h1>
@@ -32,33 +24,64 @@
         <button id="logoutBtn">Logout</button>
       </div>
 
-      <h2>Your Domains</h2>
-      <ul id="domainList"></ul>
+      <div class="tabs">
+        <button data-panel="overviewPanel" class="tab active">Overview</button>
+        <button data-panel="domainsPanel" class="tab">Domains</button>
+        <button data-panel="mailboxesPanel" class="tab">Mailboxes</button>
+        <button data-panel="accountPanel" class="tab">Account</button>
+        <button data-panel="adminPanel" class="tab" id="adminTab" style="display:none;">Admin</button>
+      </div>
 
-      <h3>Add Domain</h3>
-      <form id="domainForm" autocomplete="off">
-        <input name="domain" placeholder="Domain (example.com)" required>
-        <button type="submit">Provision Domain</button>
-      </form>
+      <div id="overviewPanel" class="panel">
+        <h2>Overview</h2>
+        <p>Welcome to your TNS Mail portal.</p>
+      </div>
 
-      <h3>Verify Domain</h3>
-      <form id="verifyForm" autocomplete="off">
-        <input name="domain" placeholder="Domain (example.com)" required>
-        <input name="token" placeholder="Verification token" required>
-        <button type="submit">Mark Verified</button>
-      </form>
+      <div id="domainsPanel" class="panel" style="display:none;">
+        <h2>Your Domains</h2>
+        <ul id="domainList"></ul>
 
-      <h2>Your Mailboxes</h2>
-      <ul id="mailboxList"></ul>
+        <div id="domainDetails" class="card" style="display:none;"></div>
 
-      <h3>Add Mailbox</h3>
-      <form id="mailboxForm" autocomplete="off">
-        <input name="domain" placeholder="Domain (example.com)" required>
-        <input name="local_part" placeholder="Local part (user)" required>
-        <input name="password" type="password" placeholder="Password" required>
-        <input name="quota" type="number" placeholder="Quota MB (default 1024)">
-        <button type="submit">Create Mailbox</button>
-      </form>
+        <h3>Add Domain</h3>
+        <form id="domainForm" autocomplete="off">
+          <input name="domain" placeholder="Domain (example.com)" required>
+          <button type="submit">Provision Domain</button>
+        </form>
+
+        <h3>Verify Domain</h3>
+        <form id="verifyForm" autocomplete="off">
+          <input name="domain" placeholder="Domain (example.com)" required>
+          <input name="token" placeholder="Verification token" required>
+          <button type="submit">Mark Verified</button>
+        </form>
+      </div>
+
+      <div id="mailboxesPanel" class="panel" style="display:none;">
+        <h2>Your Mailboxes</h2>
+        <ul id="mailboxList"></ul>
+
+        <h3>Add Mailbox</h3>
+        <form id="mailboxForm" autocomplete="off">
+          <input name="domain" placeholder="Domain (example.com)" required>
+          <input name="local_part" placeholder="Local part (user)" required>
+          <input name="password" type="password" placeholder="Password" required>
+          <input name="quota" type="number" placeholder="Quota MB (default 1024)">
+          <button type="submit">Create Mailbox</button>
+        </form>
+      </div>
+
+      <div id="accountPanel" class="panel" style="display:none;">
+        <h2>Account</h2>
+        <p>More account settings can go here later.</p>
+      </div>
+
+      <div id="adminPanel" class="panel" style="display:none;">
+        <h2>Admin</h2>
+        <div id="adminContent">
+          <p>Admin tools will appear here.</p>
+        </div>
+      </div>
 
       <pre id="output"></pre>
     </div>
@@ -78,6 +101,10 @@
       const output      = document.getElementById('output');
       const userEmailEl = document.getElementById('userEmail');
       const logoutBtn   = document.getElementById('logoutBtn');
+      const domainDetails = document.getElementById('domainDetails');
+      const tabs        = Array.from(document.querySelectorAll('.tab'));
+      const panels      = Array.from(document.querySelectorAll('.panel'));
+      const adminTab    = document.getElementById('adminTab');
 
       function getToken() {
         return localStorage.getItem('tns_token') || null;
@@ -104,6 +131,18 @@
         setToken(null);
       }
 
+      function showPanel(id) {
+        panels.forEach(p => p.style.display = (p.id === id ? 'block' : 'none'));
+        tabs.forEach(t => t.classList.toggle('active', t.dataset.panel === id));
+      }
+
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const panelId = tab.dataset.panel;
+          showPanel(panelId);
+        });
+      });
+
       async function api(path, options = {}) {
         const token = getToken();
         const headers = Object.assign(
@@ -129,7 +168,9 @@
           const data = await api('/api/me');
           setUserEmail(data.user.email);
           showApp();
+          showPanel('overviewPanel');
           await Promise.all([loadDomains(), loadMailboxes()]);
+          // later: if data.user.is_admin, show adminTab
         } catch {
           showAuth();
         }
@@ -139,13 +180,24 @@
         try {
           const data = await api('/api/domains');
           domainList.innerHTML = '';
+          domainDetails.style.display = 'none';
           (data.domains || []).forEach(d => {
             const li = document.createElement('li');
             const status = d.verified ? '✅ verified' : '❌ not verified';
-            const verifyInfo = d.verify_token
-              ? `TXT _tns-verify.${d.domain} = ${d.verify_token}`
-              : '';
-            li.textContent = `${d.domain} (${status}) ${verifyInfo}`;
+            li.textContent = `${d.domain} (${status})`;
+            li.style.cursor = 'pointer';
+            li.addEventListener('click', () => {
+              const verifyInfo = d.verify_token
+                ? `TXT _tns-verify.${d.domain} = ${d.verify_token}`
+                : 'No verification token stored.';
+              domainDetails.innerHTML = `
+                <h3>Domain details</h3>
+                <p><strong>Domain:</strong> ${d.domain}</p>
+                <p><strong>Status:</strong> ${status}</p>
+                <p><strong>Verification:</strong> ${verifyInfo}</p>
+              `;
+              domainDetails.style.display = 'block';
+            });
             domainList.appendChild(li);
           });
         } catch (err) {
@@ -179,6 +231,7 @@
           setToken(data.token);
           setUserEmail(data.user.email);
           showApp();
+          showPanel('overviewPanel');
           await Promise.all([loadDomains(), loadMailboxes()]);
           output.textContent = '';
         } catch (err) {
@@ -198,6 +251,7 @@
           setToken(data.token);
           setUserEmail(data.user.email);
           showApp();
+          showPanel('overviewPanel');
           await Promise.all([loadDomains(), loadMailboxes()]);
           output.textContent = '';
         } catch (err) {
@@ -217,6 +271,7 @@
           output.textContent = JSON.stringify(data, null, 2);
           domainForm.reset();
           await loadDomains();
+          showPanel('domainsPanel');
         } catch (err) {
           output.textContent = 'Provision error: ' + err.message;
         }
@@ -234,6 +289,7 @@
           output.textContent = data.message;
           verifyForm.reset();
           await loadDomains();
+          showPanel('domainsPanel');
         } catch (err) {
           output.textContent = 'Verify error: ' + err.message;
         }
@@ -251,6 +307,7 @@
           output.textContent = JSON.stringify(data, null, 2);
           mailboxForm.reset();
           await loadMailboxes();
+          showPanel('mailboxesPanel');
         } catch (err) {
           output.textContent = 'Mailbox error: ' + err.message;
         }
@@ -265,4 +322,3 @@
     })();
   </script>
 </body>
-</html>
