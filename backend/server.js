@@ -5,12 +5,23 @@ import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import Database from 'better-sqlite3';
+import dns from 'dns/promises';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// Rate limit login/signup
+const authLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { ok: false, error: 'Too many attempts, slow down' }
+});
+app.use('/api/login', authLimiter);
+app.use('/api/signup', authLimiter);
 
 const {
   MAILCOW_URL,
@@ -33,11 +44,13 @@ const api = axios.create({
 const db = new Database(DB_FILE);
 db.pragma('journal_mode = WAL');
 
+// Create tables
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
+    is_admin INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -46,6 +59,7 @@ db.exec(`
     user_id INTEGER NOT NULL,
     domain TEXT NOT NULL,
     verified INTEGER NOT NULL DEFAULT 0,
+    suspended INTEGER NOT NULL DEFAULT 0,
     verify_token TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id)
@@ -84,6 +98,14 @@ function authMiddleware(req, res, next) {
   }
 }
 
+function adminMiddleware(req, res, next) {
+  const row = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
+  if (!row || row.is_admin !== 1) {
+    return res.status(403).json({ ok: false, error: 'Admin only' });
+  }
+  next();
+}
+
 function randomToken(len = 32) {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let out = '';
@@ -111,7 +133,6 @@ app.post('/api/signup', async (req, res) => {
     if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
       return res.status(400).json({ ok: false, error: 'Email already in use' });
     }
-    console.error(err);
     res.status(500).json({ ok: false, error: 'Internal error' });
   }
 });
@@ -134,13 +155,14 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.get('/api/me', authMiddleware, (req, res) => {
-  res.json({ ok: true, user: req.user });
+  const row = db.prepare('SELECT id, email, is_admin FROM users WHERE id = ?').get(req.user.id);
+  res.json({ ok: true, user: row });
 });
 
 // --- Domain routes ---
 app.get('/api/domains', authMiddleware, (req, res) => {
   const rows = db.prepare(
-    'SELECT id, domain, verified, verify_token, created_at FROM domains WHERE user_id = ?'
+    'SELECT id, domain, verified, suspended, verify_token, created_at FROM domains WHERE user_id = ?'
   ).all(req.user.id);
   res.json({ ok: true, domains: rows });
 });
@@ -154,17 +176,14 @@ app.post('/api/domains', authMiddleware, async (req, res) => {
   const verifyToken = randomToken(24);
 
   try {
-    // 1. Create domain in Mailcow
     await api.post('/add/domain', { domain, active: true });
 
-    // 2. DKIM
     const dkim = await api.post('/add/dkim', {
       domain,
       selector: 'dkim',
       length: 2048
     });
 
-    // 3. Store domain with verification token
     db.prepare(
       'INSERT INTO domains (user_id, domain, verify_token) VALUES (?, ?, ?)'
     ).run(req.user.id, domain, verifyToken);
@@ -180,7 +199,6 @@ app.post('/api/domains', authMiddleware, async (req, res) => {
       }
     });
   } catch (err) {
-    console.error(err.response?.data || err.message);
     res.status(400).json({
       ok: false,
       error: err.response?.data || err.message
@@ -188,7 +206,7 @@ app.post('/api/domains', authMiddleware, async (req, res) => {
   }
 });
 
-// Simple manual verification: user submits token they see in DNS
+// Manual verification
 app.post('/api/domains/verify', authMiddleware, (req, res) => {
   const { domain, token } = req.body || {};
   if (!domain || !token) {
@@ -214,6 +232,34 @@ app.post('/api/domains/verify', authMiddleware, (req, res) => {
   res.json({ ok: true, message: 'Domain marked as verified' });
 });
 
+// Automatic DNS verification
+app.get('/api/domains/check-dns', authMiddleware, async (req, res) => {
+  const { domain } = req.query;
+
+  if (!domain)
+    return res.status(400).json({ ok: false, error: 'Domain required' });
+
+  const row = db.prepare(
+    'SELECT * FROM domains WHERE domain = ? AND user_id = ?'
+  ).get(domain, req.user.id);
+
+  if (!row) return res.status(404).json({ ok: false, error: 'Domain not found' });
+
+  try {
+    const records = await dns.resolveTxt(`_tns-verify.${domain}`);
+    const flat = records.flat().join('');
+
+    if (flat.trim() === row.verify_token.trim()) {
+      db.prepare('UPDATE domains SET verified = 1 WHERE id = ?').run(row.id);
+      return res.json({ ok: true, message: 'Domain automatically verified' });
+    }
+
+    res.json({ ok: false, message: 'Token mismatch', found: flat });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: 'DNS lookup failed' });
+  }
+});
+
 // --- Mailbox routes ---
 app.get('/api/mailboxes', authMiddleware, (req, res) => {
   const rows = db.prepare(
@@ -229,10 +275,9 @@ app.post('/api/mailboxes', authMiddleware, async (req, res) => {
   }
 
   const fullAddress = `${local_part}@${domain}`;
-  const mbQuota = Number.isFinite(Number(quota)) ? Number(quota) : 1024; // MB
+  const mbQuota = Number.isFinite(Number(quota)) ? Number(quota) : 1024;
 
   try {
-    // Create mailbox in Mailcow
     await api.post('/add/mailbox', {
       active: 1,
       domain: domain,
@@ -253,7 +298,6 @@ app.post('/api/mailboxes', authMiddleware, async (req, res) => {
       mailbox: fullAddress
     });
   } catch (err) {
-    console.error(err.response?.data || err.message);
     res.status(400).json({
       ok: false,
       error: err.response?.data || err.message
@@ -261,4 +305,90 @@ app.post('/api/mailboxes', authMiddleware, async (req, res) => {
   }
 });
 
+// Delete mailbox
+app.delete('/api/mailboxes/:id', authMiddleware, async (req, res) => {
+  const mb = db.prepare(
+    'SELECT * FROM mailboxes WHERE id = ? AND user_id = ?'
+  ).get(req.params.id, req.user.id);
+
+  if (!mb) return res.status(404).json({ ok: false, error: 'Mailbox not found' });
+
+  try {
+    await api.post('/delete/mailbox', { mailbox: [mb.address] });
+
+    db.prepare('DELETE FROM mailboxes WHERE id = ?').run(req.params.id);
+
+    res.json({ ok: true, message: 'Mailbox deleted' });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.response?.data || err.message });
+  }
+});
+
+// Reset mailbox password
+app.post('/api/mailboxes/reset', authMiddleware, async (req, res) => {
+  const { address, new_password } = req.body;
+
+  if (!address || !new_password)
+    return res.status(400).json({ ok: false, error: 'Missing fields' });
+
+  const mb = db.prepare(
+    'SELECT * FROM mailboxes WHERE address = ? AND user_id = ?'
+  ).get(address, req.user.id);
+
+  if (!mb) return res.status(404).json({ ok: false, error: 'Mailbox not found' });
+
+  try {
+    await api.post('/edit/mailbox', {
+      mailbox: address,
+      attr: {
+        password: new_password,
+        password2: new_password
+      }
+    });
+
+    res.json({ ok: true, message: 'Password reset' });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.response?.data || err.message });
+  }
+});
+
+// --- Admin routes ---
+app.get('/api/admin/users', authMiddleware, adminMiddleware, (req, res) => {
+  const rows = db.prepare('SELECT id, email, is_admin, created_at FROM users').all();
+  res.json({ ok: true, users: rows });
+});
+
+app.get('/api/admin/domains', authMiddleware, adminMiddleware, (req, res) => {
+  const rows = db.prepare('SELECT * FROM domains').all();
+  res.json({ ok: true, domains: rows });
+});
+
+app.post('/api/admin/domains/suspend', authMiddleware, adminMiddleware, async (req, res) => {
+  const { domain } = req.body;
+
+  if (!domain)
+    return res.status(400).json({ ok: false, error: 'Domain required' });
+
+  db.prepare('UPDATE domains SET suspended = 1 WHERE domain = ?').run(domain);
+
+  try {
+    await api.post('/edit/domain', {
+      domain,
+      attr: { active: false }
+    });
+  } catch {}
+
+  res.json({ ok: true, message: 'Domain suspended' });
+});
+
+app.post('/api/admin/users/promote', authMiddleware, adminMiddleware, (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ ok: false, error: 'Email required' });
+
+  db.prepare('UPDATE users SET is_admin = 1 WHERE email = ?').run(email);
+
+  res.json({ ok: true, message: 'User promoted' });
+});
+
+// --- Start server ---
 app.listen(3000, () => console.log('Backend running on port 3000'));
