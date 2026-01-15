@@ -1,7 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>TNS Mail Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="style.css">
+</head>
+
 <body>
   <div class="container">
     <h1>TNS Mail Service</h1>
 
+    <!-- AUTH SECTION -->
     <div id="authSection">
       <h2>Login</h2>
       <form id="loginForm" autocomplete="off">
@@ -18,12 +28,14 @@
       </form>
     </div>
 
+    <!-- APP SECTION -->
     <div id="appSection" style="display:none;">
       <div class="topbar">
         <span id="userEmail"></span>
         <button id="logoutBtn">Logout</button>
       </div>
 
+      <!-- TABS -->
       <div class="tabs">
         <button data-panel="overviewPanel" class="tab active">Overview</button>
         <button data-panel="domainsPanel" class="tab">Domains</button>
@@ -32,6 +44,7 @@
         <button data-panel="adminPanel" class="tab" id="adminTab" style="display:none;">Admin</button>
       </div>
 
+      <!-- PANELS -->
       <div id="overviewPanel" class="panel">
         <h2>Overview</h2>
         <p>Welcome to your TNS Mail portal.</p>
@@ -73,20 +86,19 @@
 
       <div id="accountPanel" class="panel" style="display:none;">
         <h2>Account</h2>
-        <p>More account settings can go here later.</p>
+        <p>Account settings coming soon.</p>
       </div>
 
       <div id="adminPanel" class="panel" style="display:none;">
-        <h2>Admin</h2>
-        <div id="adminContent">
-          <p>Admin tools will appear here.</p>
-        </div>
+        <h2>Admin Panel</h2>
+        <p>Admin tools will appear here after backend upgrade.</p>
       </div>
 
       <pre id="output"></pre>
     </div>
   </div>
 
+  <!-- SCRIPT -->
   <script>
     (function () {
       const authSection = document.getElementById('authSection');
@@ -170,7 +182,6 @@
           showApp();
           showPanel('overviewPanel');
           await Promise.all([loadDomains(), loadMailboxes()]);
-          // later: if data.user.is_admin, show adminTab
         } catch {
           showAuth();
         }
@@ -322,3 +333,4 @@
     })();
   </script>
 </body>
+</html>
