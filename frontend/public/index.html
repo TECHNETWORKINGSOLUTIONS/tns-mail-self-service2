@@ -41,6 +41,25 @@
         <button type="submit">Provision Domain</button>
       </form>
 
+      <h3>Verify Domain</h3>
+      <form id="verifyForm" autocomplete="off">
+        <input name="domain" placeholder="Domain (example.com)" required>
+        <input name="token" placeholder="Verification token" required>
+        <button type="submit">Mark Verified</button>
+      </form>
+
+      <h2>Your Mailboxes</h2>
+      <ul id="mailboxList"></ul>
+
+      <h3>Add Mailbox</h3>
+      <form id="mailboxForm" autocomplete="off">
+        <input name="domain" placeholder="Domain (example.com)" required>
+        <input name="local_part" placeholder="Local part (user)" required>
+        <input name="password" type="password" placeholder="Password" required>
+        <input name="quota" type="number" placeholder="Quota MB (default 1024)">
+        <button type="submit">Create Mailbox</button>
+      </form>
+
       <pre id="output"></pre>
     </div>
   </div>
@@ -52,7 +71,10 @@
       const loginForm   = document.getElementById('loginForm');
       const signupForm  = document.getElementById('signupForm');
       const domainForm  = document.getElementById('domainForm');
+      const verifyForm  = document.getElementById('verifyForm');
+      const mailboxForm = document.getElementById('mailboxForm');
       const domainList  = document.getElementById('domainList');
+      const mailboxList = document.getElementById('mailboxList');
       const output      = document.getElementById('output');
       const userEmailEl = document.getElementById('userEmail');
       const logoutBtn   = document.getElementById('logoutBtn');
@@ -107,7 +129,7 @@
           const data = await api('/api/me');
           setUserEmail(data.user.email);
           showApp();
-          await loadDomains();
+          await Promise.all([loadDomains(), loadMailboxes()]);
         } catch {
           showAuth();
         }
@@ -119,7 +141,11 @@
           domainList.innerHTML = '';
           (data.domains || []).forEach(d => {
             const li = document.createElement('li');
-            li.textContent = `${d.domain} (created ${d.created_at})`;
+            const status = d.verified ? '✅ verified' : '❌ not verified';
+            const verifyInfo = d.verify_token
+              ? `TXT _tns-verify.${d.domain} = ${d.verify_token}`
+              : '';
+            li.textContent = `${d.domain} (${status}) ${verifyInfo}`;
             domainList.appendChild(li);
           });
         } catch (err) {
@@ -127,10 +153,23 @@
         }
       }
 
+      async function loadMailboxes() {
+        try {
+          const data = await api('/api/mailboxes');
+          mailboxList.innerHTML = '';
+          (data.mailboxes || []).forEach(m => {
+            const li = document.createElement('li');
+            li.textContent = `${m.address} (${m.domain})`;
+            mailboxList.appendChild(li);
+          });
+        } catch (err) {
+          output.textContent = 'Error loading mailboxes: ' + err.message;
+        }
+      }
+
       loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(loginForm);
-        const payload = Object.fromEntries(formData);
+        const payload = Object.fromEntries(new FormData(loginForm));
         output.textContent = 'Logging in...';
         try {
           const data = await api('/api/login', {
@@ -140,7 +179,7 @@
           setToken(data.token);
           setUserEmail(data.user.email);
           showApp();
-          await loadDomains();
+          await Promise.all([loadDomains(), loadMailboxes()]);
           output.textContent = '';
         } catch (err) {
           output.textContent = 'Login error: ' + err.message;
@@ -149,8 +188,7 @@
 
       signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(signupForm);
-        const payload = Object.fromEntries(formData);
+        const payload = Object.fromEntries(new FormData(signupForm));
         output.textContent = 'Signing up...';
         try {
           const data = await api('/api/signup', {
@@ -160,7 +198,7 @@
           setToken(data.token);
           setUserEmail(data.user.email);
           showApp();
-          await loadDomains();
+          await Promise.all([loadDomains(), loadMailboxes()]);
           output.textContent = '';
         } catch (err) {
           output.textContent = 'Signup error: ' + err.message;
@@ -169,8 +207,7 @@
 
       domainForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(domainForm);
-        const payload = Object.fromEntries(formData);
+        const payload = Object.fromEntries(new FormData(domainForm));
         output.textContent = 'Provisioning domain...';
         try {
           const data = await api('/api/domains', {
@@ -185,12 +222,45 @@
         }
       });
 
+      verifyForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = Object.fromEntries(new FormData(verifyForm));
+        output.textContent = 'Verifying domain...';
+        try {
+          const data = await api('/api/domains/verify', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          output.textContent = data.message;
+          verifyForm.reset();
+          await loadDomains();
+        } catch (err) {
+          output.textContent = 'Verify error: ' + err.message;
+        }
+      });
+
+      mailboxForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = Object.fromEntries(new FormData(mailboxForm));
+        output.textContent = 'Creating mailbox...';
+        try {
+          const data = await api('/api/mailboxes', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          output.textContent = JSON.stringify(data, null, 2);
+          mailboxForm.reset();
+          await loadMailboxes();
+        } catch (err) {
+          output.textContent = 'Mailbox error: ' + err.message;
+        }
+      });
+
       logoutBtn.addEventListener('click', () => {
         setToken(null);
         showAuth();
       });
 
-      // On load, try to restore session
       loadMe();
     })();
   </script>
