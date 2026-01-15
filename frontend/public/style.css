@@ -1,4 +1,133 @@
+/* Base layout */
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background: #0f172a;
-  color: #e5e7
+  color: #e5e7eb;
+  margin: 0;
+}
+
+.container {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 24px;
+  background: #020617;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+
+h1, h2, h3 {
+  margin-top: 0;
+}
+
+/* Forms */
+form {
+  margin-bottom: 16px;
+}
+
+input, button, select {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #1f2937;
+  background: #020617;
+  color: #e5e7eb;
+}
+
+button {
+  cursor: pointer;
+  background: #2563eb;
+  border-color: #2563eb;
+  font-weight: 600;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+/* Small buttons */
+button.small {
+  width: auto;
+  display: inline-block;
+  padding: 4px 8px;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+button.danger {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+button.danger:hover {
+  background: #b91c1c;
+}
+
+/* Top bar */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tab {
+  flex: 0 0 auto;
+  background: #111827;
+  border-color: #1f2937;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.tab.active {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+/* Panels */
+.panel {
+  margin-bottom: 20px;
+}
+
+/* Lists */
+#domainList, #mailboxList, #adminUserList, #adminDomainList {
+  list-style: none;
+  padding-left: 0;
+}
+
+#domainList li,
+#mailboxList li,
+#adminUserList li,
+#adminDomainList li {
+  padding: 6px 0;
+  border-bottom: 1px solid #111827;
+}
+
+/* Cards */
+.card {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #1f2937;
+  background: #020617;
+}
+
+/* Output box */
+pre {
+  background: #020617;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  border: 1px solid #1f2937;
+  font-size: 12px;
+  margin-top: 20px;
+}
