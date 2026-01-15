@@ -1,68 +1,197 @@
-
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
   <title>TNS Mail Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  style.css
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <h1>TNS Mail Service</h1>
-    <form id="provisionForm" autocomplete="off">
-      <input name="domain" placeholder="Domain (example.com)" required>
-      <input name="email" placeholder="Admin Email" required>
-      <input name="password" type="password" placeholder="Password" required>
-      <!-- Prevent native submit -->
-      <button id="provisionBtn" type="button">Provision Domain</button>
-    </form>
-    <pre id="output"></pre>
+
+    <div id="authSection">
+      <h2>Login</h2>
+      <form id="loginForm" autocomplete="off">
+        <input name="email" type="email" placeholder="Email" required>
+        <input name="password" type="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+      </form>
+
+      <h3>Or sign up</h3>
+      <form id="signupForm" autocomplete="off">
+        <input name="email" type="email" placeholder="Email" required>
+        <input name="password" type="password" placeholder="Password" required>
+        <button type="submit">Sign Up</button>
+      </form>
+    </div>
+
+    <div id="appSection" style="display:none;">
+      <div class="topbar">
+        <span id="userEmail"></span>
+        <button id="logoutBtn">Logout</button>
+      </div>
+
+      <h2>Your Domains</h2>
+      <ul id="domainList"></ul>
+
+      <h3>Add Domain</h3>
+      <form id="domainForm" autocomplete="off">
+        <input name="domain" placeholder="Domain (example.com)" required>
+        <button type="submit">Provision Domain</button>
+      </form>
+
+      <pre id="output"></pre>
+    </div>
   </div>
 
   <script>
     (function () {
-      const form = document.getElementById('provisionForm');
-      const btn  = document.getElementById('provisionBtn');
-      const out  = document.getElementById('output');
+      const authSection = document.getElementById('authSection');
+      const appSection  = document.getElementById('appSection');
+      const loginForm   = document.getElementById('loginForm');
+      const signupForm  = document.getElementById('signupForm');
+      const domainForm  = document.getElementById('domainForm');
+      const domainList  = document.getElementById('domainList');
+      const output      = document.getElementById('output');
+      const userEmailEl = document.getElementById('userEmail');
+      const logoutBtn   = document.getElementById('logoutBtn');
 
-      function getPayload() {
-        return Object.fromEntries(new FormData(form));
+      function getToken() {
+        return localStorage.getItem('tns_token') || null;
       }
 
-      async function provision() {
+      function setToken(token) {
+        if (token) localStorage.setItem('tns_token', token);
+        else localStorage.removeItem('tns_token');
+      }
+
+      function setUserEmail(email) {
+        userEmailEl.textContent = email || '';
+      }
+
+      function showApp() {
+        authSection.style.display = 'none';
+        appSection.style.display = 'block';
+      }
+
+      function showAuth() {
+        authSection.style.display = 'block';
+        appSection.style.display = 'none';
+        setUserEmail('');
+        setToken(null);
+      }
+
+      async function api(path, options = {}) {
+        const token = getToken();
+        const headers = Object.assign(
+          { 'Content-Type': 'application/json' },
+          options.headers || {}
+        );
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+
+        const res = await fetch(path, {
+          ...options,
+          headers
+        });
+
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(body.error || 'Request failed');
+        }
+        return body;
+      }
+
+      async function loadMe() {
         try {
-          console.log('[TNS] Provision clicked');
-          out.textContent = 'Processing...';
-
-          const res = await fetch('/api/provision', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(getPayload())
-          });
-
-          const body = await res.json().catch(() => ({}));
-          console.log('[TNS] Response', res.status, body);
-          out.textContent = JSON.stringify(body, null, 2);
-        } catch (err) {
-          console.error('[TNS] Error', err);
-          out.textContent = 'Error: ' + (err?.message || String(err));
+          const data = await api('/api/me');
+          setUserEmail(data.user.email);
+          showApp();
+          await loadDomains();
+        } catch {
+          showAuth();
         }
       }
 
-      // Primary: button click
-      btn.addEventListener('click', (e) => {
+      async function loadDomains() {
+        try {
+          const data = await api('/api/domains');
+          domainList.innerHTML = '';
+          (data.domains || []).forEach(d => {
+            const li = document.createElement('li');
+            li.textContent = `${d.domain} (created ${d.created_at})`;
+            domainList.appendChild(li);
+          });
+        } catch (err) {
+          output.textContent = 'Error loading domains: ' + err.message;
+        }
+      }
+
+      loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        provision();
+        const formData = new FormData(loginForm);
+        const payload = Object.fromEntries(formData);
+        output.textContent = 'Logging in...';
+        try {
+          const data = await api('/api/login', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          setToken(data.token);
+          setUserEmail(data.user.email);
+          showApp();
+          await loadDomains();
+          output.textContent = '';
+        } catch (err) {
+          output.textContent = 'Login error: ' + err.message;
+        }
       });
 
-      // Secondary: Enter in form
-      form.addEventListener('submit', (e) => {
+      signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        provision();
+        const formData = new FormData(signupForm);
+        const payload = Object.fromEntries(formData);
+        output.textContent = 'Signing up...';
+        try {
+          const data = await api('/api/signup', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          setToken(data.token);
+          setUserEmail(data.user.email);
+          showApp();
+          await loadDomains();
+          output.textContent = '';
+        } catch (err) {
+          output.textContent = 'Signup error: ' + err.message;
+        }
       });
 
-      console.log('[TNS] UI initialized');
+      domainForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(domainForm);
+        const payload = Object.fromEntries(formData);
+        output.textContent = 'Provisioning domain...';
+        try {
+          const data = await api('/api/domains', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          output.textContent = JSON.stringify(data, null, 2);
+          domainForm.reset();
+          await loadDomains();
+        } catch (err) {
+          output.textContent = 'Provision error: ' + err.message;
+        }
+      });
+
+      logoutBtn.addEventListener('click', () => {
+        setToken(null);
+        showAuth();
+      });
+
+      // On load, try to restore session
+      loadMe();
     })();
   </script>
 </body>
